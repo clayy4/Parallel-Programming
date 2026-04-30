@@ -1,13 +1,23 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <cstdlib>
+#include <chrono>
 
 
-std::vector<std::vector<int>> read_matrix(const std::string& filename, int rows, int cols) {
+std::vector<std::vector<int>> read_matrix(const std::string& filename) {
     std::ifstream file(filename);
 
     if (!file.is_open()) {
         std::cerr << "Error: cannot open file\n";
+        exit(1);
+    }
+
+    int rows, cols;
+    file >> rows >> cols;
+
+    if (rows <= 0 || cols <= 0) {
+        std::cerr << "Error: invalid matrix size\n";
         exit(1);
     }
 
@@ -81,7 +91,21 @@ std::vector<std::vector<int>> multiply_matrix(std::vector<std::vector<int>> M1, 
 }
 
 
-int main(){
+int main() {
+    std::vector<std::vector<int>> matrix1 = read_matrix("matrix1.txt");
+    std::vector<std::vector<int>> matrix2 = read_matrix("matrix2.txt");
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    std::vector<std::vector<int>> result = multiply_matrix(matrix1, matrix2);
+
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double, std::milli> duration = end - start;
+
+    write_matrix("result.txt", result);
+
+    std::cout << "Multiplication time: " << duration.count() << " ms\n";
 
     return 0;
 }
