@@ -1,5 +1,6 @@
+import os
 import argparse
-from random import randint
+import random
 
 
 def args_parser():
@@ -16,10 +17,16 @@ def generate_matrix(rows, cols, min_val, max_val, filename):
     if rows <= 0 or cols <= 0:
         raise ValueError("Matrix dimensions must be greater than 0")
 
-    with open(filename, "w", encoding="utf-8") as f:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    folder = os.path.join(base_dir, "..", "matrix")
+    os.makedirs(folder, exist_ok=True)
+
+    filepath = os.path.join(folder, filename)
+
+    with open(filepath, "w", encoding="utf-8") as f:
         f.write(f"{rows}\t{cols}\n")
         for _ in range(rows):
-            row = [str(randint(min_val, max_val)) for _ in range(cols)]
+            row = [str(random.randint(min_val, max_val)) for _ in range(cols)]
             f.write(" ".join(row) + "\n")
 
 

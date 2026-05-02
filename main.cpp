@@ -5,7 +5,9 @@
 #include <chrono>
 
 
-std::vector<std::vector<int>> read_matrix(const std::string& filename) {
+using ll = long long;
+
+std::vector<std::vector<ll>> read_matrix(const std::string& filename) {
     std::ifstream file(filename);
 
     if (!file.is_open()) {
@@ -21,7 +23,7 @@ std::vector<std::vector<int>> read_matrix(const std::string& filename) {
         exit(1);
     }
 
-    std::vector<std::vector<int>> matrix(rows, std::vector<int>(cols));
+    std::vector<std::vector<ll>> matrix(rows, std::vector<ll>(cols));
 
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
@@ -36,7 +38,7 @@ std::vector<std::vector<int>> read_matrix(const std::string& filename) {
 }
 
 
-void write_matrix(const std::string& filename, const std::vector<std::vector<int>>& M) {
+void write_matrix(const std::string& filename, const std::vector<std::vector<ll>>& M) {
     if (M.empty()) {
         std::cerr << "Error: empty matrix\n";
         exit(1);
@@ -61,7 +63,7 @@ void write_matrix(const std::string& filename, const std::vector<std::vector<int
 }
 
 
-std::vector<std::vector<int>> multiply_matrix(std::vector<std::vector<int>> M1, const std::vector<std::vector<int>> M2) {
+std::vector<std::vector<ll>> multiply_matrix(const std::vector<std::vector<ll>>& M1, const std::vector<std::vector<ll>>& M2) {
     if (M1.empty() || M2.empty()) {
         std::cerr << "Error: empty matrix\n";
         exit(1);
@@ -77,7 +79,7 @@ std::vector<std::vector<int>> multiply_matrix(std::vector<std::vector<int>> M1, 
         exit(1);
     }
 
-    std::vector<std::vector<int>> result(M1_rows, std::vector<int>(M2_cols, 0));
+    std::vector<std::vector<ll>> result(M1_rows, std::vector<ll>(M2_cols, 0));
 
     for (int i = 0; i < M1_rows; ++i) {
         for (int j = 0; j < M2_cols; ++j) {
@@ -92,18 +94,18 @@ std::vector<std::vector<int>> multiply_matrix(std::vector<std::vector<int>> M1, 
 
 
 int main() {
-    std::vector<std::vector<int>> matrix1 = read_matrix("matrix1.txt");
-    std::vector<std::vector<int>> matrix2 = read_matrix("matrix2.txt");
+    std::vector<std::vector<ll>> matrix1 = read_matrix("matrix/matrix1.txt");
+    std::vector<std::vector<ll>> matrix2 = read_matrix("matrix/matrix2.txt");
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    std::vector<std::vector<int>> result = multiply_matrix(matrix1, matrix2);
+    std::vector<std::vector<ll>> result = multiply_matrix(matrix1, matrix2);
 
     auto end = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double, std::milli> duration = end - start;
 
-    write_matrix("result.txt", result);
+    write_matrix("matrix/result.txt", result);
 
     std::cout << "Multiplication time: " << duration.count() << " ms\n";
 
