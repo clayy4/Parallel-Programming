@@ -99,76 +99,65 @@ std::vector<std::vector<ll>> multiply_matrix(const std::vector<std::vector<ll>>&
 }
 
 
-bool processing(std::vector<size_t>& threads, std::vector<std::vector<std::string>>& data, size_t test_num){
-    for(const size_t& thread: threads) {
-        omp_set_num_threads(thread);
-        for(const auto& d: data){
-            std::string rows, cols, min, max, path_m1, path_m2;
-            rows = d[0];
-            cols = d[1];
-            min = d[2]; 
-            max = d[3];
-            path_m1 = d[4];
-            path_m2 = d[5];
+void generate_matrix(size_t rows, size_t cols, const std::string& output_filename, int min=-10000, int max=10000) {
+    std::string command = std::format("python python\\matrix_generator.py -r {} -c {} -m {} -M {} -o {}", rows, cols, min, max, output_filename);
+    system(command.c_str());
+}
 
-            std::vector<double> timer(test_num, 0.0);
-            for(size_t i = 0;  i < test_num; i++){
-                    std::string command1 = std::format("python python\\matrix_generator.py -r {} -c {} -m {} -M {} -o {}", rows, cols, min, max, path_m1);
-                    std::string command2 = std::format("python python\\matrix_generator.py -r {} -c {} -m {} -M {} -o {}", rows, cols, min, max, path_m2);
-                    system(command1.c_str());
-                    system(command2.c_str());
+double run_single_test() {
+    auto m1 = read_matrix("matrix/matrix1.txt");
+    auto m2 = read_matrix("matrix/matrix2.txt");
 
-                    std::vector<std::vector<ll>> matrix1 = read_matrix("matrix/matrix1.txt");
-                    std::vector<std::vector<ll>> matrix2 = read_matrix("matrix/matrix2.txt");
+    auto start = std::chrono::high_resolution_clock::now();
+    auto result = multiply_matrix(m1, m2);
+    auto end = std::chrono::high_resolution_clock::now();
 
-                    auto start = std::chrono::high_resolution_clock::now();
+    write_matrix("matrix/result.txt", result);
+    system("python python\\verification.py");
 
-                    std::vector<std::vector<ll>> result = multiply_matrix(matrix1, matrix2);
+    return std::chrono::duration<double, std::milli>(end - start).count();
+}
 
-                    auto end = std::chrono::high_resolution_clock::now();
 
-                    std::chrono::duration<double, std::milli> duration = end - start;
-                    timer[i] = duration.count();
+void log_result(size_t size, double avg_time, size_t threads) {
+    std::ofstream log("src/measurements.txt", std::ios::app);
+    log << "Size: " << size << " | Time: " << avg_time << " ms | Threads: " << threads << "\n";
+}
 
-                    write_matrix("matrix/result.txt", result);
 
-                    system("python python\\verification.py");
-            }
-            
-            double avg = 0.0;
-            for(double time: timer){
-                avg+=time;
-            }
-            avg/=3.0;
+void run_benchmark_for_size(size_t size, size_t threads, size_t repeats) {
+    omp_set_num_threads(threads);
 
-            
-            std::ofstream file("src/measurements.txt", std::ios::app);
+    std::vector<double> times;
+    for (size_t i = 0; i < repeats; i++) {
+        generate_matrix(size, size, "matrix1.txt");
+        generate_matrix(size, size, "matrix2.txt");
 
-            file << "Size: " << rows
-                << " | Time: " << avg << " ms"
-                << " | Threads: " << thread
-                << "\n";
-
-        }
+        double time = run_single_test();
+        times.push_back(time);
     }
-    return true;
+
+    double avg = 0.0;
+    for (double t : times) avg += t;
+    avg /= repeats;
+
+    log_result(size, avg, threads);
+    std::cout << "  " << threads << " threads: " << avg << " ms\n";
 }
 
 
 int main() {
-    std::vector<size_t> threads = {1, 2, 4, 8};
-    std::vector<std::vector<std::string>> data = {
-        {"200",  "200",  "-10000", "10000", "matrix1.txt", "matrix2.txt"},
-        {"400",  "400",  "-10000", "10000", "matrix1.txt", "matrix2.txt"},
-        {"800",  "800",  "-10000", "10000", "matrix1.txt", "matrix2.txt"},
-        {"1200", "1200", "-10000", "10000", "matrix1.txt", "matrix2.txt"},
-        {"1600", "1600", "-10000", "10000", "matrix1.txt", "matrix2.txt"},
-        {"2000", "2000", "-10000", "10000", "matrix1.txt", "matrix2.txt"}
-    };
-    size_t number_of_tests = 3;
+    std::vector<size_t> threads_list = {1, 2, 4, 8};
+    std::vector<size_t> sizes = {200, 400, 800, 1200, 1600, 2000};
+    const size_t tests_per_config = 3;
 
-    processing(threads, data, number_of_tests);
-    
+    std::ofstream("src/measurements.txt", std::ios::trunc).close();
 
+    for (size_t size : sizes) {        
+        for (size_t threads : threads_list) {
+            run_benchmark_for_size(size, threads, tests_per_config);
+        }
+        std::cout << "\n";
+    }
     return 0;
 }
