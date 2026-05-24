@@ -19,8 +19,6 @@ inline void gpuAssert(cudaError_t code, const char* file, int line) {
     }
 }
 
-// ===================== IO =====================
-
 std::vector<std::vector<ll>> read_matrix(const std::string& filename) {
     std::ifstream file(filename);
 
@@ -54,8 +52,6 @@ void write_matrix(const std::string& filename, const std::vector<std::vector<ll>
     }
 }
 
-// ===================== CUDA KERNEL =====================
-
 __global__ void multiply_matrix_kernel(
     const ll* A,
     const ll* B,
@@ -64,10 +60,9 @@ __global__ void multiply_matrix_kernel(
     int A_cols,
     int B_cols
 ) {
-    // Динамическая разделяемая память для двух тайлов
     extern __shared__ ll shared[];
 
-    const int TILE = blockDim.x; // Предполагаем blockDim.x == blockDim.y == tile_size
+    const int TILE = blockDim.x;
 
     ll* tileA = shared;
     ll* tileB = shared + TILE * TILE;
@@ -75,52 +70,41 @@ __global__ void multiply_matrix_kernel(
     const int tx = threadIdx.x;
     const int ty = threadIdx.y;
 
-    // Глобальные индексы элемента в результирующей матрице C
     const int row = blockIdx.y * TILE + ty;
     const int col = blockIdx.x * TILE + tx;
 
     ll sum = 0;
 
-    // Итерация по тайлам вдоль общей границы матриц (A_cols / B_rows)
     for (int t = 0; t < (A_cols + TILE - 1) / TILE; ++t) {
 
-        // Каждый поток загружает один элемент в tileA и один в tileB
         int aCol = t * TILE + tx;
         int bRow = t * TILE + ty;
 
-        // Загрузка в тайл А (строка 'row', столбец 'aCol')
         if (row < A_rows && aCol < A_cols) {
             tileA[ty * TILE + tx] = A[row * A_cols + aCol];
         } else {
             tileA[ty * TILE + tx] = 0;
         }
 
-        // Загрузка в тайл B (строка 'bRow', столбец 'col')
         if (bRow < A_cols && col < B_cols) {
             tileB[ty * TILE + tx] = B[bRow * B_cols + col];
         } else {
             tileB[ty * TILE + tx] = 0;
         }
 
-        // Синхронизация: ждем пока весь блок заполнит тайлы
         __syncthreads();
 
-        // Перемножение элементов текущего тайла
         for (int k = 0; k < TILE; ++k) {
             sum += tileA[ty * TILE + k] * tileB[k * TILE + tx];
         }
 
-        // Синхронизация перед следующей итерацией (чтобы не перезаписать данные раньше времени)
         __syncthreads();
     }
 
-    // Запись результата в глобальную память
     if (row < A_rows && col < B_cols) {
         C[row * B_cols + col] = sum;
     }
 }
-
-// ===================== CUDA MULTIPLY =====================
 
 double multiply_matrix(
     const std::vector<std::vector<ll>>& M1,
@@ -179,8 +163,6 @@ double multiply_matrix(
 
     CUDA_CHECK(cudaMemcpy(h_C.data(), d_C, h_C.size() * sizeof(ll), cudaMemcpyDeviceToHost));
 
-    // ================== ИСПРАВЛЕННЫЙ БЛОК: ЗАПИСЬ РЕЗУЛЬТАТА ==================
-    // 1. Конвертируем одномерный вектор h_C обратно в двумерный формат
     std::vector<std::vector<ll>> M_res(A_rows, std::vector<ll>(B_cols));
     for (int i = 0; i < A_rows; ++i) {
         for (int j = 0; j < B_cols; ++j) {
@@ -188,9 +170,7 @@ double multiply_matrix(
         }
     }
 
-    // 2. Записываем полученную матрицу в файл для верификации Python-скриптом
     write_matrix("matrix/result.txt", M_res);
-    // =========================================================================
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
@@ -200,8 +180,6 @@ double multiply_matrix(
 
     return static_cast<double>(ms);
 }
-
-// ===================== BENCHMARK =====================
 
 void generate_matrix(size_t rows, size_t cols, const std::string& output_filename) {
     std::string cmd = std::format(
@@ -242,8 +220,6 @@ void run_benchmark_for_size(size_t size, int tile, int repeats) {
     std::cout << "  Tile " << tile << "x" << tile
               << ": " << avg << " ms\n";
 }
-
-// ===================== MAIN =====================
 
 int main() {
 
