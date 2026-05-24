@@ -1,0 +1,6 @@
+Size: 200 | Time: 51.2899 ms | Processes: 1
+Size: 400 | Time: 402.648 ms | Processes: 1
+Size: 800 | Time: 3166.47 ms | Processes: 1
+Size: 1200 | Time: 11477.7 ms | Processes: 1
+Size: 1600 | Time: 37483.2 ms | Processes: 1
+Size: 2000 | Time: 93033 ms | Processes: 1
